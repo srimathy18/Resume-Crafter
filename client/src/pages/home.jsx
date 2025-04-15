@@ -1,4 +1,4 @@
-import React, { useContext} from "react";
+import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -34,45 +34,61 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start px-4 py-20 text-center bg-gradient-to-br from-[#f2f3ff] via-[#e6e7ff] to-[#dcdfff]">
-   
+    <div className="min-h-screen flex flex-col items-center px-4 py-20 bg-gradient-to-br from-[#f2f3ff] via-[#e6e7ff] to-[#dcdfff]">
+      {/* Hero Section */}
+      <div className="w-full max-w-7xl flex flex-col-reverse md:flex-row items-center justify-between gap-10">
+        {/* Left Text Section */}
+        <div className="md:w-1/2 text-left">
+          <motion.h1
+            className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6"
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            Welcome to <span className="text-[#7A73D1]">ResumeCrafter</span>
+          </motion.h1>
 
-      {/* Heading */}
-      <motion.h1
-        className="text-4xl md:text-6xl font-extrabold text-gray-900 mb-6 mt-16"
-        initial={{ opacity: 0, y: -30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        Welcome to <span className="text-[#7A73D1]">ResumeCrafter</span>
-      </motion.h1>
+          <motion.p
+            className="text-gray-700 mb-8 text-base md:text-lg max-w-md"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            Create a stunning, professional resume in minutes using AI tools
+            designed to showcase your strengths and land your dream job.
+          </motion.p>
 
-      <motion.p
-        className="max-w-2xl text-gray-700 mb-10 text-base md:text-lg"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        Create a stunning, professional resume in minutes using AI tools designed to showcase your strengths and land your dream job.
-      </motion.p>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Button
+              className="bg-[#7A73D1] hover:bg-[#625acc] px-8 py-3 text-white text-lg rounded-xl shadow-md transition duration-300 hover:scale-105"
+              onClick={handleGetStarted}
+            >
+              Get Started
+            </Button>
+          </motion.div>
+        </div>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.3 }}
-      >
-        <Button
-          className="bg-[#7A73D1] hover:bg-[#625acc] px-8 py-3 text-white text-lg rounded-xl shadow-md transition duration-300 hover:scale-105"
-          onClick={handleGetStarted}
-        >
-          Get Started
-        </Button>
-      </motion.div>
+        {/* Right Image Section */}
+        <div className="md:w-1/2">
+          <motion.img
+            src="./resume.jpg"
+            alt="Resume Builder Preview"
+            className="rounded-2xl border-[6px] border-[#7A73D1] shadow-2xl transition-all duration-300 hover:scale-105 w-full max-w-xl"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+          />
+        </div>
+      </div>
 
       {/* Features Section */}
       <div className="mt-24 w-full max-w-6xl px-4">
-        <h2 className="text-3xl font-semibold text-gray-800 mb-3">How It Works</h2>
-        <p className="text-gray-600 mb-12 max-w-2xl mx-auto">
+        <h2 className="text-3xl font-semibold text-gray-800 mb-3 text-center">How It Works</h2>
+        <p className="text-gray-600 mb-12 max-w-2xl mx-auto text-center">
           Our AI-powered resume builder helps you craft personalized, professional resumes with ease. Here's what you get:
         </p>
 

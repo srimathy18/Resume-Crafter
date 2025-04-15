@@ -1,9 +1,11 @@
+// src/components/Navbar.jsx
+
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 
-const UseNavbar = () => {
+const Navbar = () => {
   const { user, logout } = useContext(AppContext);
   const navigate = useNavigate();
 
@@ -39,4 +41,4 @@ const UseNavbar = () => {
   );
 };
 
-export default UseNavbar;
+export default Navbar;

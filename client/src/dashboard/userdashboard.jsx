@@ -1,17 +1,17 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import UserNavbar from '../dashboard/UserNavbar';
+import Navbar from '../dashboard/UserNavbar';
 
 const UserDashboard = () => {
   const navigate = useNavigate();
 
   const handleCreateResume = () => {
-    navigate('/resume-form'); // Step 1: Go to form
+    navigate('/create-resume'); // Step 1: Go to form
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f2f3ff] via-[#e6e7ff] to-[#dcdfff]">
-      <UserNavbar />
+      <Navbar />
       <div className="max-w-6xl mx-auto pt-32 px-4">
   <div
     onClick={handleCreateResume}

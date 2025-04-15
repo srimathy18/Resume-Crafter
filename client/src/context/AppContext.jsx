@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -12,7 +12,6 @@ export const AppProvider = ({ children }) => {
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  // ✅ Set token and persist to localStorage
   const setToken = (newToken) => {
     setTokenState(newToken);
     if (newToken) {
@@ -22,8 +21,9 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // ✅ Fetch user profile from backend
   const fetchUserProfile = async () => {
+    if (!token) return;
+
     try {
       setLoadingUser(true);
       const { data } = await axios.get(`${backendUrl}/api/user/profile`, {
@@ -35,18 +35,15 @@ export const AppProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("Failed to fetch user profile", error);
-      toast.error("Session expired. Please login again.");
+      toast.error("Session expired. Please log in again.");
       logout();
     } finally {
       setLoadingUser(false);
     }
   };
 
-  // ✅ Fetch user when token changes
   useEffect(() => {
-    if (token) {
-      fetchUserProfile();
-    }
+    if (token) fetchUserProfile();
   }, [token]);
 
   const logout = () => {
@@ -72,3 +69,5 @@ export const AppProvider = ({ children }) => {
     </AppContext.Provider>
   );
 };
+
+export const useAppContext = () => useContext(AppContext);
