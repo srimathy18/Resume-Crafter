@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { templates } from '../resume/ResumeTemplates';
 import WorkExperience from '../resume/WorkExperience';
@@ -7,8 +7,8 @@ import Skills from '../resume/Skills';
 import Projects from '../resume/Projects';
 import Hobbies from '../resume/Hobbies';
 import { FaDownload, FaSave, FaMagic } from 'react-icons/fa';
-import { generateFullResume } from '../services/gemini';
-import { generatePDF, saveDraft, updateDraft } from '../services/documentUtils';
+import { generatePDF } from '../services/documentUtils';
+import axios from 'axios';
 
 const initialResumeData = {
   personalInfo: {
@@ -21,27 +21,10 @@ const initialResumeData = {
     industry: '',
     objective: ''
   },
-  experience: [{
-    title: '',
-    company: '',
-    duration: '',
-    industry: '',
-    responsibilities: ['']
-  }],
-  education: [{
-    degree: '',
-    school: '',
-    field: '',
-    duration: '',
-    description: ''
-  }],
+  experience: [{ title: '', company: '', duration: '', industry: '', responsibilities: [''] }],
+  education: [{ degree: '', school: '', field: '', duration: '', description: '' }],
   skills: [''],
-  projects: [{
-    name: '',
-    technologies: '',
-    industry: '',
-    description: ''
-  }],
+  projects: [{ name: '', technologies: '', industry: '', description: '' }],
   hobbies: ['']
 };
 
@@ -54,6 +37,32 @@ function ResumeBuilder() {
   const [draftId, setDraftId] = useState(null);
   const resumeRef = useRef();
 
+  const token = localStorage.getItem('token'); 
+
+  // Function to replace unsupported oklch color values with rgb
+  const replaceOklchColors = () => {
+    const styleSheets = document.styleSheets;
+    for (let i = 0; i < styleSheets.length; i++) {
+      try {
+        const rules = styleSheets[i].cssRules;
+        for (let j = 0; j < rules.length; j++) {
+          const rule = rules[j];
+          if (rule.style) {
+            for (let k = 0; k < rule.style.length; k++) {
+              const property = rule.style[k];
+              if (rule.style[property] && rule.style[property].includes('oklch')) {
+                rule.style[property] = rule.style[property].replace(/oklch\([^)]*\)/g, 'rgb(0, 0, 0)');
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error processing stylesheets:', error);
+      }
+    }
+  };
+
+  // Export PDF function
   const handleExportPDF = async () => {
     if (!resumeRef.current) {
       toast.error('Resume content not ready');
@@ -62,6 +71,10 @@ function ResumeBuilder() {
 
     try {
       setLoading(true);
+      
+      // Calling  this func to replace 'oklch' colors before generating the PDF
+      replaceOklchColors();
+
       const fileName = `${resumeData.personalInfo.name || 'My'}_Resume`;
       await generatePDF(resumeRef.current, fileName);
       toast.success('Resume exported successfully!');
@@ -87,13 +100,20 @@ function ResumeBuilder() {
         lastModified: new Date().toISOString()
       };
 
-      if (draftId) {
-        await updateDraft(draftId, draftContent);
+      // Corrected the Authorization header with backticks for string interpolation
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+
+      // Call the API to save or update the draft
+      const response = draftId
+        ? await axios.put(`/api/resumes/update/${draftId}`, draftContent, config)
+        : await axios.post('/api/resumes/save', draftContent, config);
+
+      if (response.data.success) {
+        setDraftId(response.data.id || draftId); // Save the draft ID
+        toast.success('Resume draft saved successfully!');
       } else {
-        const result = await saveDraft(draftContent, 'resume');
-        setDraftId(result.id);
+        toast.error('Failed to save resume draft');
       }
-      toast.success('Resume draft saved successfully!');
     } catch (error) {
       console.error('Error saving draft:', error);
       toast.error('Failed to save resume draft');
@@ -110,11 +130,7 @@ function ResumeBuilder() {
 
     setGenerating(true);
     try {
-      const generatedContent = await generateFullResume(resumeData);
-      setResumeData(prevData => ({
-        ...prevData,
-        ...generatedContent
-      }));
+      // Call your AI generation function here
       toast.success('Resume content generated successfully!');
     } catch (error) {
       console.error('Error generating resume:', error);
@@ -124,21 +140,13 @@ function ResumeBuilder() {
     }
   };
 
-  const handlePersonalInfoChange = (field, value) => {
-    setResumeData(prev => ({
-      ...prev,
-      personalInfo: { ...prev.personalInfo, [field]: value },
-    }));
-  };
-
   const TemplateComponent = templates[selectedTemplate].component;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Form Section */}
         <div className="space-y-6">
-          {/* Personal Information */}
+          {/* Personal Information Form */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-2xl font-bold mb-6">Resume Details</h2>
             <div className="space-y-6">
@@ -151,7 +159,7 @@ function ResumeBuilder() {
                     <input
                       type="text"
                       value={resumeData.personalInfo[field]}
-                      onChange={(e) => handlePersonalInfoChange(field, e.target.value)}
+                      onChange={(e) => setResumeData(prev => ({ ...prev, personalInfo: { ...prev.personalInfo, [field]: e.target.value } }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </div>
@@ -172,50 +180,39 @@ function ResumeBuilder() {
           <div className="bg-white p-6 rounded-lg shadow-md">
             <WorkExperience
               experience={resumeData.experience}
-              onChange={(newExperience) =>
-                setResumeData(prev => ({ ...prev, experience: newExperience }))
-              }
+              onChange={(newExperience) => setResumeData(prev => ({ ...prev, experience: newExperience }))}
             />
           </div>
 
-          {/* Education */}
+          {/* Education Section */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <Education
               education={resumeData.education}
-              onChange={(newEducation) =>
-                setResumeData(prev => ({ ...prev, education: newEducation }))
-              }
+              onChange={(newEducation) => setResumeData(prev => ({ ...prev, education: newEducation }))}
             />
           </div>
 
-          {/* Skills */}
+          {/* Skills Section */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <Skills
               skills={resumeData.skills}
-              jobInfo={resumeData.personalInfo}
-              onChange={(newSkills) =>
-                setResumeData(prev => ({ ...prev, skills: newSkills }))
-              }
+              onChange={(newSkills) => setResumeData(prev => ({ ...prev, skills: newSkills }))}
             />
           </div>
 
-          {/* Projects */}
+          {/* Projects Section */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <Projects
               projects={resumeData.projects}
-              onChange={(newProjects) =>
-                setResumeData(prev => ({ ...prev, projects: newProjects }))
-              }
+              onChange={(newProjects) => setResumeData(prev => ({ ...prev, projects: newProjects }))}
             />
           </div>
 
-          {/* Hobbies */}
+          {/* Hobbies Section */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <Hobbies
               hobbies={resumeData.hobbies}
-              onChange={(newHobbies) =>
-                setResumeData(prev => ({ ...prev, hobbies: newHobbies }))
-              }
+              onChange={(newHobbies) => setResumeData(prev => ({ ...prev, hobbies: newHobbies }))}
             />
           </div>
 
@@ -244,6 +241,7 @@ function ResumeBuilder() {
             >
               <FaDownload /> {loading ? 'Exporting...' : 'Export PDF'}
             </button>
+
             <button
               onClick={handleSaveDraft}
               disabled={savingDraft}
@@ -255,7 +253,7 @@ function ResumeBuilder() {
           </div>
         </div>
 
-        {/* Preview Section */}
+        {/* Resume Preview */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-bold mb-6">Preview</h2>
           <div ref={resumeRef} className="w-full">

@@ -1,33 +1,32 @@
-import express from "express";
+import express from 'express';
 import {
-  createResume,
-  generateResumeAI,
-  getUserResumes,
-  getResumeById,
-  updateResume,
-  deleteResume
-} from "../controllers/resumeController.js";
+  saveDraft,
+  getUserDrafts,
+  getSingleDraft,
+  updateDraft,
+  deleteDraft,
+} from '../controllers/resumeController.js'; 
 
-import userAuth from "../middlewares/auth.js"; // Auth middleware to protect routes
+import authenticateUser from '../middlewares/auth.js'; 
 
 const router = express.Router();
 
-// Create a resume manually
-router.post("/", userAuth, createResume);
+// All routes will be protected
+router.use(authenticateUser);
 
-// Generate resume using AI
-router.post("/generate", userAuth, generateResumeAI);
+// Save a new resume draft
+router.post('/drafts', saveDraft);
 
-// Get all resumes of the logged-in user
-router.get("/", userAuth, getUserResumes);
+// Get all drafts for the logged-in user
+router.get('/my-drafts', getUserDrafts);
 
-// Get a single resume by ID
-router.get("/:id", userAuth, getResumeById);
+// Get a specific draft by ID
+router.get('/drafts/:id', getSingleDraft);
 
-// Update a resume by ID
-router.put("/:id", userAuth, updateResume);
+// Update a specific draft
+router.put('/drafts/:id', updateDraft);
 
-// Delete a resume by ID
-router.delete("/:id", userAuth, deleteResume);
+// Delete a specific draft
+router.delete('/drafts/:id', deleteDraft);
 
 export default router;

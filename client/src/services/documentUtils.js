@@ -1,7 +1,6 @@
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { getFirestore, collection, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import axios from 'axios';
 
 // PDF Generation
 export const generatePDF = async (contentRef, fileName = 'document') => {
@@ -35,55 +34,71 @@ export const generatePDF = async (contentRef, fileName = 'document') => {
   }
 };
 
-// Save draft to Firestore
-export const saveDraft = async (content, type) => {
-  const db = getFirestore();
-  const auth = getAuth();
-  const user = auth.currentUser;
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
+// Save Draft to MongoDB
+export const saveDraft = async (content, type, token) => {
   try {
-    const draftData = {
-      userId: user.uid,
-      content,
-      type,
-      createdAt: new Date().toISOString(),
-      lastUpdated: new Date().toISOString(),
-    };
+    // Handle missing token scenario
+    if (!token) {
+      throw new Error('User is not authenticated');
+    }
 
-    const draftsCollection = collection(db, 'drafts');
-    const docRef = await addDoc(draftsCollection, draftData);
+    const res = await axios.post(
+      '/api/resumes/save',
+      { content, type },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
 
-    return { success: true, id: docRef.id, message: 'Draft saved successfully' };
+    if (res.data.success) {
+      return res.data;
+    } else {
+      throw new Error('Failed to save draft');
+    }
   } catch (error) {
     console.error('Error saving draft:', error);
-    throw error;
+    if (error.response && error.response.status === 401) {
+      // Handle token expiry (redirect to login or show alert)
+      alert('Session expired. Please log in again.');
+      window.location.href = '/login';  // Replace with your login page URL
+    } else {
+      throw error;
+    }
   }
 };
 
-// Update existing draft
-export const updateDraft = async (draftId, content) => {
-  const db = getFirestore();
-  const auth = getAuth();
-  const user = auth.currentUser;
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
+// Update Existing Draft
+export const updateDraft = async (draftId, content, token) => {
   try {
-    const draftRef = doc(db, 'drafts', draftId);
-    await updateDoc(draftRef, {
-      content,
-      lastUpdated: new Date().toISOString(),
-    });
+    if (!token) {
+      throw new Error('User is not authenticated');
+    }
 
-    return { success: true, message: 'Draft updated successfully' };
+    const res = await axios.put(
+      `/api/resumes/update/${draftId}`,
+      { content },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (res.data.success) {
+      return res.data;
+    } else {
+      throw new Error('Failed to update draft');
+    }
   } catch (error) {
     console.error('Error updating draft:', error);
-    throw error;
+    if (error.response && error.response.status === 401) {
+      // Handle token expiry (redirect to login or show alert)
+      alert('Session expired. Please log in again.');
+      window.location.href = '/login';  // Replace with your login page URL
+    } else {
+      throw error;
+    }
   }
 };

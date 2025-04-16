@@ -33,7 +33,7 @@ const Login = () => {
         localStorage.setItem('token', data.token);
         setUser(data.user);
         setShowLogin(false);
-        navigate('/dashboard'); // ✅ redirect to dashboard after login/signup
+        navigate('/dashboard'); 
       } else {
         toast.error(data.message);
       }

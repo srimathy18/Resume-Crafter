@@ -1,98 +1,128 @@
-import Resume from "../models/resumeModel.js";
-import { generateResumeFromGemini } from "../utils/gemini.js";
+import Resume from '../models/resumeModel.js';
+import mongoose from 'mongoose';
 
-// Create resume manually
-const createResume = async (req, res) => {
-  try {
-    const resumeData = {
-      ...req.body,
-      userId: req.user.id,
-    };
-    const resume = new Resume(resumeData);
-    await resume.save();
-    res.status(201).json(resume);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+// Save new resume draft
+export const saveDraft = async (req, res) => {
+  const { resumeData, selectedTemplate } = req.body;
+  const userId = req.user.id;
+
+  if (!resumeData || !selectedTemplate) {
+    return res.status(400).json({ success: false, error: 'Missing resume data or template' });
   }
-};
 
-// Generate resume using Gemini AI
-const generateResumeAI = async (req, res) => {
   try {
-    const userInput = req.body;
-    const aiContent = await generateResumeFromGemini(userInput);
-
-    const resume = new Resume({
-      ...aiContent,
-      userId: req.user.id,
-      aiGenerated: true,
+    const newDraft = new Resume({
+      userId,
+      resumeData,
+      selectedTemplate,
+      lastModified: new Date(),
     });
 
-    await resume.save();
-    res.status(201).json(resume);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// Get all resumes for the logged-in user
-const getUserResumes = async (req, res) => {
-  try {
-    const resumes = await Resume.find({ userId: req.user.id });
-    res.status(200).json(resumes);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// Get a single resume by ID
-const getResumeById = async (req, res) => {
-  try {
-    const resume = await Resume.findOne({
-      _id: req.params.id,
-      userId: req.user.id,
+    const savedDraft = await newDraft.save();
+    res.status(201).json({
+      success: true,
+      id: savedDraft._id,
+      message: 'Resume draft saved successfully!',
     });
-    if (!resume) return res.status(404).json({ error: "Resume not found" });
-    res.status(200).json(resume);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error(`Error saving draft for user ${userId}:`, error);
+    res.status(500).json({ success: false, error: 'Failed to save resume draft' });
   }
 };
 
-// Update a resume
-const updateResume = async (req, res) => {
+// Get all drafts for the logged-in user
+export const getUserDrafts = async (req, res) => {
+  const userId = req.user.id;
+
   try {
-    const updated = await Resume.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
-      req.body,
+    const drafts = await Resume.find({ userId }).sort({ lastModified: -1 });
+    res.status(200).json({ success: true, drafts });
+  } catch (error) {
+    console.error(`Error fetching drafts for user ${userId}:`, error);
+    res.status(500).json({ success: false, error: 'Failed to fetch drafts' });
+  }
+};
+
+// Get a single draft by ID
+export const getSingleDraft = async (req, res) => {
+  const userId = req.user.id;
+  const draftId = req.params.id;
+
+  if (!mongoose.Types.ObjectId.isValid(draftId)) {
+    return res.status(400).json({ success: false, error: 'Invalid draft ID' });
+  }
+
+  try {
+    const draft = await Resume.findOne({ _id: draftId, userId });
+    if (!draft) {
+      return res.status(404).json({ success: false, error: 'Draft not found or unauthorized' });
+    }
+
+    res.status(200).json({ success: true, draft });
+  } catch (error) {
+    console.error(`Error fetching draft ${draftId} for user ${userId}:`, error);
+    res.status(500).json({ success: false, error: 'Failed to fetch draft' });
+  }
+};
+
+// Update an existing resume draft
+export const updateDraft = async (req, res) => {
+  const draftId = req.params.id;
+  const { resumeData, selectedTemplate } = req.body;
+  const userId = req.user.id;
+
+  if (!mongoose.Types.ObjectId.isValid(draftId)) {
+    return res.status(400).json({ success: false, error: 'Invalid draft ID' });
+  }
+
+  if (!resumeData || !selectedTemplate) {
+    return res.status(400).json({ success: false, error: 'Missing resume data or template' });
+  }
+
+  try {
+    const updatedDraft = await Resume.findOneAndUpdate(
+      { _id: draftId, userId },
+      { resumeData, selectedTemplate, lastModified: new Date() },
       { new: true }
     );
-    if (!updated) return res.status(404).json({ error: "Resume not found" });
-    res.status(200).json(updated);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
 
-// Delete a resume
-const deleteResume = async (req, res) => {
-  try {
-    const deleted = await Resume.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user.id,
+    if (!updatedDraft) {
+      return res.status(404).json({ success: false, error: 'Draft not found or unauthorized' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Resume draft updated successfully!',
+      draft: updatedDraft,
     });
-    if (!deleted) return res.status(404).json({ error: "Resume not found" });
-    res.status(200).json({ message: "Resume deleted" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error(`Error updating draft ${draftId} for user ${userId}:`, error);
+    res.status(500).json({ success: false, error: 'Failed to update resume draft' });
   }
 };
 
-export {
-  createResume,
-  generateResumeAI,
-  getUserResumes,
-  getResumeById,
-  updateResume,
-  deleteResume
+// Delete a resume draft
+export const deleteDraft = async (req, res) => {
+  const draftId = req.params.id;
+  const userId = req.user.id;
+
+  if (!mongoose.Types.ObjectId.isValid(draftId)) {
+    return res.status(400).json({ success: false, error: 'Invalid draft ID' });
+  }
+
+  try {
+    const deleted = await Resume.findOneAndDelete({ _id: draftId, userId });
+
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Draft not found or unauthorized' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Resume draft deleted successfully!',
+    });
+  } catch (error) {
+    console.error(`Error deleting draft ${draftId} for user ${userId}:`, error);
+    res.status(500).json({ success: false, error: 'Failed to delete resume draft' });
+  }
 };
